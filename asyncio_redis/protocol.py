@@ -5,6 +5,7 @@ import types
 
 from asyncio.futures import Future
 from asyncio.queues import Queue
+from asyncio.streams import IncompleteReadError
 from asyncio.streams import StreamReader
 
 try:
@@ -914,7 +915,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
                 yield from self._handle_item(self._push_answer)
             except ConnectionLostError:
                 return
-            except asyncio.streams.IncompleteReadError:
+            except IncompleteReadError:
                 return
 
     async def _handle_item(self, cb):
