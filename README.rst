@@ -70,8 +70,7 @@ connection.
     import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Connection.create(host='127.0.0.1', port=6379)
 
@@ -96,11 +95,9 @@ connection will be used for new commands.
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Pool.create(host='127.0.0.1', port=6379, poolsize=10)
 
@@ -116,11 +113,9 @@ Transactions example
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Pool.create(host='127.0.0.1', port=6379, poolsize=10)
 
@@ -150,11 +145,9 @@ Pubsub example
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create connection
         connection = yield from asyncio_redis.Connection.create(host='127.0.0.1', port=6379)
 
@@ -178,7 +171,6 @@ LUA Scripting example
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
     code = \
@@ -188,8 +180,7 @@ LUA Scripting example
     return value * ARGV[1]
     """
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         connection = yield from asyncio_redis.Connection.create(host='127.0.0.1', port=6379)
 
         # Set a key
@@ -215,8 +206,7 @@ Example using the Protocol class
     import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         loop = asyncio.get_event_loop()
 
         # Create Redis connection

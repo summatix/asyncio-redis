@@ -30,8 +30,7 @@ class Cursor:
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self._name)
 
-    @asyncio.coroutine
-    def _fetch_more(self):
+    async def _fetch_more(self):
         """ Get next chunk of keys from Redis """
         if not self._done:
             chunk = yield from self._scanfunc(self._cursor, self.count)
@@ -43,8 +42,7 @@ class Cursor:
             for i in chunk.items:
                 self._queue.append(i)
 
-    @asyncio.coroutine
-    def fetchone(self):
+    async def fetchone(self):
         """
         Coroutines that returns the next item.
         It returns `None` after the last item.
@@ -60,8 +58,7 @@ class Cursor:
         if self._queue:
             return self._queue.popleft()
 
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         """ Coroutine that reads all the items in one list. """
         results = []
 
@@ -78,8 +75,7 @@ class SetCursor(Cursor):
     Cursor for walking through the results of a :func:`sscan
     <asyncio_redis.RedisProtocol.sscan>` query.
     """
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         result = yield from super().fetchall()
         return set(result)
 
@@ -92,8 +88,7 @@ class DictCursor(Cursor):
     def _parse(self, key, value):
         return key, value
 
-    @asyncio.coroutine
-    def fetchone(self):
+    async def fetchone(self):
         """
         Get next { key: value } tuple
         It returns `None` after the last item.
@@ -105,8 +100,7 @@ class DictCursor(Cursor):
             key, value = self._parse(key, value)
             return { key: value }
 
-    @asyncio.coroutine
-    def fetchall(self):
+    async def fetchall(self):
         """ Coroutine that reads all the items in one dictionary. """
         results = {}
 

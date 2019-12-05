@@ -59,8 +59,7 @@ class DictReply:
         """ Yield a list of futures that yield { key: value } tuples. """
         i = iter(self._result)
 
-        @asyncio.coroutine
-        def getter(f):
+        async def getter(f):
             """ Coroutine which processes one item. """
             key, value = yield from f
             key, value = self._parse(key, value)
@@ -70,8 +69,7 @@ class DictReply:
             read_future = self._result._read(count=2)
             yield ensure_future(getter(read_future), loop=self._result._loop)
 
-    @asyncio.coroutine
-    def asdict(self):
+    async def asdict(self):
         """
         Return the result as a Python dictionary.
         """
@@ -110,8 +108,7 @@ class SetReply:
         """ Yield a list of futures. """
         return iter(self._result)
 
-    @asyncio.coroutine
-    def asset(self):
+    async def asset(self):
         """ Return the result as a Python ``set``.  """
         data = yield from self._result._read(count=self._result.count)
         return set(data)
@@ -140,8 +137,7 @@ class ListReply:
         """ Yield a list of futures. """
         return iter(self._result)
 
-    @asyncio.coroutine
-    def aslist(self):
+    async def aslist(self):
         """ Return the result as a Python ``list``. """
         data = yield from self._result._read(count=self._result.count)
         return data
@@ -247,16 +243,14 @@ class EvalScriptReply:
         self._protocol = protocol
         self._value = value
 
-    @asyncio.coroutine
-    def return_value(self):
+    async def return_value(self):
         """
         Coroutine that returns a Python representation of the script's return
         value.
         """
         from asyncio_redis.protocol import MultiBulkReply
 
-        @asyncio.coroutine
-        def decode(obj):
+        async def decode(obj):
             if isinstance(obj, int):
                 return obj
 

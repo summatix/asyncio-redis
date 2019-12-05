@@ -23,8 +23,7 @@ class Pool:
         result = yield from connection.set('key', 'value')
     """
     @classmethod
-    @asyncio.coroutine
-    def create(cls, host='localhost', port=6379, *, password=None, db=0,
+    async def create(cls, host='localhost', port=6379, *, password=None, db=0,
                encoder=None, poolsize=1, auto_reconnect=True, loop=None,
                protocol_class=RedisProtocol):
         """
@@ -121,9 +120,8 @@ class Pool:
 
     # Proxy the register_script method, so that the returned object will
     # execute on any available connection in the pool.
-    @asyncio.coroutine
     @wraps(RedisProtocol.register_script)
-    def register_script(self, script:str) -> Script:
+    async def register_script(self, script:str) -> Script:
         # Call register_script from the Protocol.
         script = yield from self.__getattr__('register_script')(script)
         assert isinstance(script, Script)

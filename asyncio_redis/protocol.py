@@ -279,57 +279,48 @@ class PostProcessors:
         original_post_processor = cls.get_default(return_type)
 
         if return_type == ListReply:
-            @asyncio.coroutine
-            def as_list(protocol, result):
+            async def as_list(protocol, result):
                 result = yield from original_post_processor(protocol, result)
                 return (yield from result.aslist())
             return '_aslist', list, as_list
 
         elif return_type == SetReply:
-            @asyncio.coroutine
-            def as_set(protocol, result):
+            async def as_set(protocol, result):
                 result = yield from original_post_processor(protocol, result)
                 return (yield from result.asset())
             return '_asset', set, as_set
 
         elif return_type in (DictReply, ZRangeReply):
-            @asyncio.coroutine
-            def as_dict(protocol, result):
+            async def as_dict(protocol, result):
                 result = yield from original_post_processor(protocol, result)
                 return (yield from result.asdict())
             return '_asdict', dict, as_dict
 
     # === Post processor handlers below. ===
 
-    @asyncio.coroutine
-    def multibulk_as_list(protocol, result):
+    async def multibulk_as_list(protocol, result):
         assert isinstance(result, MultiBulkReply)
         return ListReply(result)
 
-    @asyncio.coroutine
-    def multibulk_as_boolean_list(protocol, result):
+    async def multibulk_as_boolean_list(protocol, result):
         # Turn the array of integers into booleans.
         assert isinstance(result, MultiBulkReply)
         values = yield from ListReply(result).aslist()
         return [ bool(v) for v in values ]
 
-    @asyncio.coroutine
-    def multibulk_as_set(protocol, result):
+    async def multibulk_as_set(protocol, result):
         assert isinstance(result, MultiBulkReply)
         return SetReply(result)
 
-    @asyncio.coroutine
-    def multibulk_as_dict(protocol, result):
+    async def multibulk_as_dict(protocol, result):
         assert isinstance(result, MultiBulkReply)
         return DictReply(result)
 
-    @asyncio.coroutine
-    def multibulk_as_zrangereply(protocol, result):
+    async def multibulk_as_zrangereply(protocol, result):
         assert isinstance(result, MultiBulkReply)
         return ZRangeReply(result)
 
-    @asyncio.coroutine
-    def multibulk_as_blocking_pop_reply(protocol, result):
+    async def multibulk_as_blocking_pop_reply(protocol, result):
         if result is None:
             raise TimeoutError('Timeout in blocking pop')
         else:
@@ -337,14 +328,12 @@ class PostProcessors:
             list_name, value = yield from ListReply(result).aslist()
             return BlockingPopReply(list_name, value)
 
-    @asyncio.coroutine
-    def multibulk_as_configpair(protocol, result):
+    async def multibulk_as_configpair(protocol, result):
         assert isinstance(result, MultiBulkReply)
         parameter, value = yield from ListReply(result).aslist()
         return ConfigPairReply(parameter, value)
 
-    @asyncio.coroutine
-    def multibulk_as_scanpart(protocol, result):
+    async def multibulk_as_scanpart(protocol, result):
         """
         Process scanpart result.
         This is a multibulk reply of length two, where the first item is the
@@ -361,64 +350,53 @@ class PostProcessors:
         items = yield from ListReply(items_bulk).aslist()
         return _ScanPart(int(new_cursor_pos), items)
 
-    @asyncio.coroutine
-    def bytes_to_info(protocol, result):
+    async def bytes_to_info(protocol, result):
         assert isinstance(result, bytes)
         return InfoReply(result)
 
-    @asyncio.coroutine
-    def bytes_to_status_reply(protocol, result):
+    async def bytes_to_status_reply(protocol, result):
         assert isinstance(result, bytes)
         return StatusReply(result.decode('utf-8'))
 
-    @asyncio.coroutine
-    def bytes_to_status_reply_or_none(protocol, result):
+    async def bytes_to_status_reply_or_none(protocol, result):
         assert isinstance(result, (bytes, NoneType))
         if result:
             return StatusReply(result.decode('utf-8'))
 
-    @asyncio.coroutine
-    def bytes_to_clientlist(protocol, result):
+    async def bytes_to_clientlist(protocol, result):
         assert isinstance(result, bytes)
         return ClientListReply(result)
 
-    @asyncio.coroutine
-    def int_to_bool(protocol, result):
+    async def int_to_bool(protocol, result):
         assert isinstance(result, int)
         return bool(result) # Convert int to bool
 
-    @asyncio.coroutine
-    def bytes_to_native(protocol, result):
+    async def bytes_to_native(protocol, result):
         assert isinstance(result, bytes)
         return protocol.decode_to_native(result)
 
-    @asyncio.coroutine
-    def bytes_to_str(protocol, result):
+    async def bytes_to_str(protocol, result):
         assert isinstance(result, bytes)
         return result.decode('ascii')
 
-    @asyncio.coroutine
-    def bytes_to_native_or_none(protocol, result):
+    async def bytes_to_native_or_none(protocol, result):
         if result is None:
             return result
         else:
             assert isinstance(result, bytes)
             return protocol.decode_to_native(result)
 
-    @asyncio.coroutine
-    def bytes_to_float_or_none(protocol, result):
+    async def bytes_to_float_or_none(protocol, result):
         if result is None:
             return result
         assert isinstance(result, bytes)
         return float(result)
 
-    @asyncio.coroutine
-    def bytes_to_float(protocol, result):
+    async def bytes_to_float(protocol, result):
         assert isinstance(result, bytes)
         return float(result)
 
-    @asyncio.coroutine
-    def any_to_evalscript(protocol, result):
+    async def any_to_evalscript(protocol, result):
         # Result can be native, int, MultiBulkReply or even a nested structure
         assert isinstance(result, (int, bytes, MultiBulkReply, NoneType))
         return EvalScriptReply(protocol, result)
@@ -629,8 +607,7 @@ class CommandCreator:
         # directly on the protocol, outside of transactions or from the
         # transaction object.
         @wraps(method)
-        @asyncio.coroutine
-        def wrapper(protocol_self, *a, **kw):
+        async def wrapper(protocol_self, *a, **kw):
             if a and isinstance(a[0], (Transaction, _NoTransactionType)):
                 transaction = a[0]
                 a = a[1:]
@@ -646,8 +623,7 @@ class CommandCreator:
 
                 # Typecheck the future when the result is available.
 
-                @asyncio.coroutine
-                def done(result):
+                async def done(result):
                     if post_process:
                         result = yield from post_process(protocol_self, result)
                     typecheck_return(protocol_self, result)
@@ -827,8 +803,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         self._reader.set_transport(transport)
         self._reader_f = ensure_future(self._reader_coroutine(), loop=self._loop)
 
-        @asyncio.coroutine
-        def initialize():
+        async def initialize():
             # If a password or database was been given, first connect to that one.
             if self.password:
                 yield from self.auth(self.password)
@@ -930,8 +905,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
     # Handle replies
 
-    @asyncio.coroutine
-    def _reader_coroutine(self):
+    async def _reader_coroutine(self):
         """
         Coroutine which reads input from the stream reader and processes it.
         """
@@ -943,31 +917,26 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             except asyncio.streams.IncompleteReadError:
                 return
 
-    @asyncio.coroutine
-    def _handle_item(self, cb):
+    async def _handle_item(self, cb):
         c = yield from self._reader.readexactly(1)
         if c:
             yield from self._line_received_handlers[c](cb)
         else:
             raise ConnectionLostError(None)
 
-    @asyncio.coroutine
-    def _handle_status_reply(self, cb):
+    async def _handle_status_reply(self, cb):
         line = (yield from self._reader.readline()).rstrip(b'\r\n')
         cb(line)
 
-    @asyncio.coroutine
-    def _handle_int_reply(self, cb):
+    async def _handle_int_reply(self, cb):
         line = (yield from self._reader.readline()).rstrip(b'\r\n')
         cb(int(line))
 
-    @asyncio.coroutine
-    def _handle_error_reply(self, cb):
+    async def _handle_error_reply(self, cb):
         line = (yield from self._reader.readline()).rstrip(b'\r\n')
         cb(ErrorReply(line.decode('ascii')))
 
-    @asyncio.coroutine
-    def _handle_bulk_reply(self, cb):
+    async def _handle_bulk_reply(self, cb):
         length = int((yield from self._reader.readline()).rstrip(b'\r\n'))
         if length == -1:
             # None bulk reply
@@ -981,8 +950,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             remaining = yield from self._reader.readline()
             assert remaining.rstrip(b'\r\n') == b''
 
-    @asyncio.coroutine
-    def _handle_multi_bulk_reply(self, cb):
+    async def _handle_multi_bulk_reply(self, cb):
                 # NOTE: the reason for passing the callback `cb` in here is
                 #       mainly because we want to return the result object
                 #       especially in this case before the input is read
@@ -1007,8 +975,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         for i in range(count):
             yield from self._handle_item(reply._feed_received)
 
-    @asyncio.coroutine
-    def _handle_pubsub_multibulk_reply(self, multibulk_reply):
+    async def _handle_pubsub_multibulk_reply(self, multibulk_reply):
         # Read first item of the multi bulk reply raw.
         type = yield from multibulk_reply._read(decode=False, _one=True)
         assert type in (b'message', b'subscribe', b'unsubscribe', b'pmessage', b'psubscribe', b'punsubscribe')
@@ -1051,8 +1018,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         # Flush the last part
         self.transport.write(b''.join(data))
 
-    @asyncio.coroutine
-    def _get_answer(self, transaction, answer_f, _bypass=False, call=None):  # XXX: rename _bypass to not_queued
+    async def _get_answer(self, transaction, answer_f, _bypass=False, call=None):  # XXX: rename _bypass to not_queued
         """
         Return an answer to the pipelined query.
         (Or when we are in a transaction, return a future for the answer.)
@@ -1090,8 +1056,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         else:
             f.set_result(answer)
 
-    @asyncio.coroutine
-    def _query(self, transaction, *args, _bypass=False, set_blocking=False):
+    async def _query(self, transaction, *args, _bypass=False, set_blocking=False):
         """
         Wrapper around both _send_command and _get_answer.
 
@@ -1528,8 +1493,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         return self._query(tr, command, *([ self.encode_from_native(k) for k in keys ] + [self._encode_int(timeout)]), set_blocking=True)
 
     @_command
-    @asyncio.coroutine
-    def brpoplpush(self, tr, source:NativeType, destination:NativeType, timeout:int=0) -> NativeType:
+    async def brpoplpush(self, tr, source:NativeType, destination:NativeType, timeout:int=0) -> NativeType:
         """ Pop a value from a list, push it to another list and return it; or block until one is available """
         result = yield from self._query(tr, b'brpoplpush', self.encode_from_native(source), self.encode_from_native(destination),
                     self._encode_int(timeout), set_blocking=True)
@@ -1912,8 +1876,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         self._pubsub_patterns -= set(patterns)
         return self._pubsub_method('punsubscribe', patterns)
 
-    @asyncio.coroutine
-    def _pubsub_method(self, method, params):
+    async def _pubsub_method(self, method, params):
         if not self._in_pubsub:
             raise Error('Cannot call pubsub methods without calling start_subscribe')
 
@@ -2075,8 +2038,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
     # LUA scripting
 
     @_command
-    @asyncio.coroutine
-    def register_script(self, tr, script:str) -> 'Script':
+    async def register_script(self, tr, script:str) -> 'Script':
         """
         Register a LUA script.
 
@@ -2101,8 +2063,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         return self._query(tr, b'script', b'flush')
 
     @_query_command
-    @asyncio.coroutine
-    def script_kill(self, tr) -> StatusReply:
+    async def script_kill(self, tr) -> StatusReply:
         """
         Kill the script currently in execution.  This raises
         :class:`~asyncio_redis.exceptions.NoRunningScriptError` when there are no
@@ -2117,8 +2078,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
                 raise
 
     @_query_command
-    @asyncio.coroutine
-    def evalsha(self, tr, sha:str,
+    async def evalsha(self, tr, sha:str,
                         keys:(ListOf(NativeType), NoneType)=None,
                         args:(ListOf(NativeType), NoneType)=None) -> EvalScriptReply:
         """
@@ -2253,8 +2213,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
     # Transaction
     @_command
-    @asyncio.coroutine
-    def watch(self, tr, keys:ListOf(NativeType)) -> NoneType:
+    async def watch(self, tr, keys:ListOf(NativeType)) -> NoneType:
         """
         Watch keys.
 
@@ -2281,14 +2240,12 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         """
         return self._watch(tr, keys)
 
-    @asyncio.coroutine
-    def _watch(self, tr, keys:ListOf(NativeType)) -> NoneType:
+    async def _watch(self, tr, keys:ListOf(NativeType)) -> NoneType:
         result = yield from self._query(tr, b'watch', *map(self.encode_from_native, keys), _bypass=True)
         assert result == b'OK'
 
     @_command
-    @asyncio.coroutine
-    def multi(self, tr, watch:(ListOf(NativeType),NoneType)=None) -> 'Transaction':
+    async def multi(self, tr, watch:(ListOf(NativeType),NoneType)=None) -> 'Transaction':
         """
         Start of transaction.
 
@@ -2330,8 +2287,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         return tr
 
-    @asyncio.coroutine
-    def _exec(self, tr):
+    async def _exec(self, tr):
         """
         Execute all commands issued after MULTI
         """
@@ -2366,8 +2322,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             self._transaction = None
             self._transaction_lock.release()
 
-    @asyncio.coroutine
-    def _discard(self, tr):
+    async def _discard(self, tr):
         """
         Discard all commands issued after MULTI
         """
@@ -2382,8 +2337,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             self._transaction = None
             self._transaction_lock.release()
 
-    @asyncio.coroutine
-    def _unwatch(self, tr):
+    async def _unwatch(self, tr):
         """
         Forget about all watched keys
         """
@@ -2495,8 +2449,7 @@ class Subscription:
     def punsubscribe(self, patterns):
         return self.protocol._punsubscribe(self, patterns)
 
-    @asyncio.coroutine
-    def next_published(self):
+    async def next_published(self):
         """
         Coroutine which waits for next pubsub message to be received and
         returns it.
@@ -2559,7 +2512,6 @@ class HiRedisProtocol(RedisProtocol, metaclass=_RedisProtocolMeta):
         elif isinstance(item, NoneType):
             cb(item)
 
-    @asyncio.coroutine
-    def _reader_coroutine(self):
+    async def _reader_coroutine(self):
         # We don't need this one.
         return

@@ -17,8 +17,7 @@ command of the protocol can be called directly at the connection.
     import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
 
@@ -48,11 +47,9 @@ commands.
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Pool.create(host='localhost', port=6379, poolsize=10)
 
@@ -76,11 +73,9 @@ with :func:`exec <asyncio_redis.Transaction.exec>`.
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example(loop):
+    async def example(loop):
         # Create Redis connection
         connection = yield from asyncio_redis.Pool.create(host='localhost', port=6379, poolsize=10)
 
@@ -116,11 +111,9 @@ the :class:`Connection <asyncio_redis.Connection>` class or through the :class:`
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create connection
         connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
 
@@ -150,7 +143,6 @@ function -- which can be used to register a LUA script -- returns a
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
     code = \
@@ -160,8 +152,7 @@ function -- which can be used to register a LUA script -- returns a
     return value * ARGV[1]
     """
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
 
         # Set a key
@@ -191,13 +182,11 @@ connection, pool or protocol.
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
     from asyncio_redis.encoders import BytesEncoder
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         # Create Redis connection
         connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379, encoder=BytesEncoder())
 
@@ -222,13 +211,11 @@ The following example will print all the keys in the database:
 
 .. code:: python
 
-    import asyncio
     import asyncio_redis
 
     from asyncio_redis.encoders import BytesEncoder
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         cursor = yield from protocol.scan(match='*')
         while True:
             item = yield from cursor.fetchone()
@@ -256,8 +243,7 @@ it as follows:
     import asyncio
     import asyncio_redis
 
-    @asyncio.coroutine
-    def example():
+    async def example():
         loop = asyncio.get_event_loop()
 
         # Create Redis connection

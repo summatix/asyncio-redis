@@ -15,8 +15,7 @@ except ImportError:
 from asyncio_redis.protocol import HiRedisProtocol
 
 
-@asyncio.coroutine
-def test1(connection):
+async def test1(connection):
     """ Del/get/set of keys """
     yield from connection.delete(['key'])
     yield from connection.set('key', 'value')
@@ -24,8 +23,7 @@ def test1(connection):
     assert result == 'value'
 
 
-@asyncio.coroutine
-def test2(connection):
+async def test2(connection):
     """ Get/set of a hash of 100 items (with _asdict) """
     d = { str(i):str(i) for i in range(100) }
 
@@ -35,8 +33,7 @@ def test2(connection):
     assert result == d
 
 
-@asyncio.coroutine
-def test3(connection):
+async def test3(connection):
     """ Get/set of a hash of 100 items (without _asdict) """
     d = { str(i):str(i) for i in range(100) }
 
@@ -53,8 +50,7 @@ def test3(connection):
     assert d2 == d
 
 
-@asyncio.coroutine
-def test4(connection):
+async def test4(connection):
     """ sadd/smembers of a set of 100 items. (with _asset) """
     s = { str(i) for i in range(100) }
 
@@ -65,8 +61,7 @@ def test4(connection):
     assert s2 == s
 
 
-@asyncio.coroutine
-def test5(connection):
+async def test5(connection):
     """ sadd/smembers of a set of 100 items. (without _asset) """
     s = { str(i) for i in range(100) }
 

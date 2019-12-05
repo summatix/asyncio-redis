@@ -26,8 +26,7 @@ class Connection:
         result = yield from connection.set('key', 'value')
     """
     @classmethod
-    @asyncio.coroutine
-    def create(cls, host='localhost', port=6379, *, password=None, db=0,
+    async def create(cls, host='localhost', port=6379, *, password=None, db=0,
                encoder=None, auto_reconnect=True, loop=None, protocol_class=RedisProtocol):
         """
         :param host: Address, either host or unix domain socket path
@@ -92,8 +91,7 @@ class Connection:
         """ When a connection failed. Increase the interval."""
         self._retry_interval = min(60, 1.5 * self._retry_interval)
 
-    @asyncio.coroutine
-    def _connect(self):
+    async def _connect(self):
         """
         Set up Redis connection.
         """
@@ -103,8 +101,7 @@ class Connection:
         else:
             yield from self._loop.create_unix_connection(lambda: self.protocol, self.host)
 
-    @asyncio.coroutine
-    def _reconnect(self):
+    async def _reconnect(self):
         """
         Set up Redis re-connection.
         """
