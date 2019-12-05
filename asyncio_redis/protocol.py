@@ -281,20 +281,20 @@ class PostProcessors:
 
         if return_type == ListReply:
             async def as_list(protocol, result):
-                result = yield from original_post_processor(protocol, result)
-                return (yield from result.aslist())
+                result = await original_post_processor(protocol, result)
+                return (await result.aslist())
             return '_aslist', list, as_list
 
         elif return_type == SetReply:
             async def as_set(protocol, result):
-                result = yield from original_post_processor(protocol, result)
-                return (yield from result.asset())
+                result = await original_post_processor(protocol, result)
+                return (await result.asset())
             return '_asset', set, as_set
 
         elif return_type in (DictReply, ZRangeReply):
             async def as_dict(protocol, result):
-                result = yield from original_post_processor(protocol, result)
-                return (yield from result.asdict())
+                result = await original_post_processor(protocol, result)
+                return (await result.asdict())
             return '_asdict', dict, as_dict
 
     # === Post processor handlers below. ===
@@ -306,7 +306,7 @@ class PostProcessors:
     async def multibulk_as_boolean_list(protocol, result):
         # Turn the array of integers into booleans.
         assert isinstance(result, MultiBulkReply)
-        values = yield from ListReply(result).aslist()
+        values = await ListReply(result).aslist()
         return [ bool(v) for v in values ]
 
     async def multibulk_as_set(protocol, result):
@@ -326,12 +326,12 @@ class PostProcessors:
             raise TimeoutError('Timeout in blocking pop')
         else:
             assert isinstance(result, MultiBulkReply)
-            list_name, value = yield from ListReply(result).aslist()
+            list_name, value = await ListReply(result).aslist()
             return BlockingPopReply(list_name, value)
 
     async def multibulk_as_configpair(protocol, result):
         assert isinstance(result, MultiBulkReply)
-        parameter, value = yield from ListReply(result).aslist()
+        parameter, value = await ListReply(result).aslist()
         return ConfigPairReply(parameter, value)
 
     async def multibulk_as_scanpart(protocol, result):
@@ -343,12 +343,12 @@ class PostProcessors:
         """
         # Get outer multi bulk reply.
         assert isinstance(result, MultiBulkReply)
-        new_cursor_pos, items_bulk = yield from ListReply(result).aslist()
+        new_cursor_pos, items_bulk = await ListReply(result).aslist()
         assert isinstance(items_bulk, MultiBulkReply)
 
         # Read all items for scan chunk in memory. This is fine, because it's
         # transmitted in chunks of about 10.
-        items = yield from ListReply(items_bulk).aslist()
+        items = await ListReply(items_bulk).aslist()
         return _ScanPart(int(new_cursor_pos), items)
 
     async def bytes_to_info(protocol, result):
@@ -619,14 +619,14 @@ class CommandCreator:
             if transaction != _NoTransaction:
                 # In case of a transaction, we receive a Future from the command.
                 typecheck_input(protocol_self, *a, **kw)
-                future = yield from method(protocol_self, transaction, *a, **kw)
+                future = await method(protocol_self, transaction, *a, **kw)
                 future2 = Future(loop=protocol_self._loop)
 
                 # Typecheck the future when the result is available.
 
                 async def done(result):
                     if post_process:
-                        result = yield from post_process(protocol_self, result)
+                        result = await post_process(protocol_self, result)
                     typecheck_return(protocol_self, result)
                     future2.set_result(result)
 
@@ -641,17 +641,17 @@ class CommandCreator:
 
                 else:
                     typecheck_input(protocol_self, *a[1:], **kw)
-                    result = yield from method(protocol_self, _NoTransaction, *a[1:], **kw)
+                    result = await method(protocol_self, _NoTransaction, *a[1:], **kw)
                     if post_process:
-                        result = yield from post_process(protocol_self, result)
+                        result = await post_process(protocol_self, result)
                     typecheck_return(protocol_self, result)
                     return (result)
 
             else:
                 typecheck_input(protocol_self, *a, **kw)
-                result = yield from method(protocol_self, _NoTransaction, *a, **kw)
+                result = await method(protocol_self, _NoTransaction, *a, **kw)
                 if post_process:
-                    result = yield from post_process(protocol_self, result)
+                    result = await post_process(protocol_self, result)
                 typecheck_return(protocol_self, result)
                 return result
 
@@ -733,7 +733,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
     ::
 
         self.loop = asyncio.get_event_loop()
-        transport, protocol = yield from loop.create_connection(RedisProtocol, 'localhost', 6379)
+        transport, protocol = await loop.create_connection(RedisProtocol, 'localhost', 6379)
 
     :param password: Redis database password
     :type password: Native Python type as defined by the ``encoder`` parameter
@@ -807,18 +807,18 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         async def initialize():
             # If a password or database was been given, first connect to that one.
             if self.password:
-                yield from self.auth(self.password)
+                await self.auth(self.password)
 
             if self.db:
-                yield from self.select(self.db)
+                await self.select(self.db)
 
             #  If we are in pubsub mode, send channel subscriptions again.
             if self._in_pubsub:
                 if self._pubsub_channels:
-                    yield from self._subscribe(self._subscription, list(self._pubsub_channels)) # TODO: unittest this
+                    await self._subscribe(self._subscription, list(self._pubsub_channels)) # TODO: unittest this
 
                 if self._pubsub_patterns:
-                    yield from self._psubscribe(self._subscription, list(self._pubsub_patterns))
+                    await self._psubscribe(self._subscription, list(self._pubsub_patterns))
 
         ensure_future(initialize(), loop=self._loop)
 
@@ -912,43 +912,43 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         """
         while True:
             try:
-                yield from self._handle_item(self._push_answer)
+                await self._handle_item(self._push_answer)
             except ConnectionLostError:
                 return
             except IncompleteReadError:
                 return
 
     async def _handle_item(self, cb):
-        c = yield from self._reader.readexactly(1)
+        c = await self._reader.readexactly(1)
         if c:
-            yield from self._line_received_handlers[c](cb)
+            await self._line_received_handlers[c](cb)
         else:
             raise ConnectionLostError(None)
 
     async def _handle_status_reply(self, cb):
-        line = (yield from self._reader.readline()).rstrip(b'\r\n')
+        line = (await self._reader.readline()).rstrip(b'\r\n')
         cb(line)
 
     async def _handle_int_reply(self, cb):
-        line = (yield from self._reader.readline()).rstrip(b'\r\n')
+        line = (await self._reader.readline()).rstrip(b'\r\n')
         cb(int(line))
 
     async def _handle_error_reply(self, cb):
-        line = (yield from self._reader.readline()).rstrip(b'\r\n')
+        line = (await self._reader.readline()).rstrip(b'\r\n')
         cb(ErrorReply(line.decode('ascii')))
 
     async def _handle_bulk_reply(self, cb):
-        length = int((yield from self._reader.readline()).rstrip(b'\r\n'))
+        length = int((await self._reader.readline()).rstrip(b'\r\n'))
         if length == -1:
             # None bulk reply
             cb(None)
         else:
             # Read data
-            data = yield from self._reader.readexactly(length)
+            data = await self._reader.readexactly(length)
             cb(data)
 
             # Ignore trailing newline.
-            remaining = yield from self._reader.readline()
+            remaining = await self._reader.readline()
             assert remaining.rstrip(b'\r\n') == b''
 
     async def _handle_multi_bulk_reply(self, cb):
@@ -956,7 +956,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
                 #       mainly because we want to return the result object
                 #       especially in this case before the input is read
                 #       completely. This allows a streaming API.
-        count = int((yield from self._reader.readline()).rstrip(b'\r\n'))
+        count = int((await self._reader.readline()).rstrip(b'\r\n'))
 
         # Handle multi-bulk none.
         # (Used when a transaction exec fails.)
@@ -974,20 +974,20 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         # Wait for all multi bulk reply content.
         for i in range(count):
-            yield from self._handle_item(reply._feed_received)
+            await self._handle_item(reply._feed_received)
 
     async def _handle_pubsub_multibulk_reply(self, multibulk_reply):
         # Read first item of the multi bulk reply raw.
-        type = yield from multibulk_reply._read(decode=False, _one=True)
+        type = await multibulk_reply._read(decode=False, _one=True)
         assert type in (b'message', b'subscribe', b'unsubscribe', b'pmessage', b'psubscribe', b'punsubscribe')
 
         if type == b'message':
-            channel, value = yield from multibulk_reply._read(count=2)
-            yield from self._subscription._messages_queue.put(PubSubReply(channel, value))
+            channel, value = await multibulk_reply._read(count=2)
+            await self._subscription._messages_queue.put(PubSubReply(channel, value))
 
         elif type == b'pmessage':
-            pattern, channel, value = yield from multibulk_reply._read(count=3)
-            yield from self._subscription._messages_queue.put(PubSubReply(channel, value, pattern=pattern))
+            pattern, channel, value = await multibulk_reply._read(count=3)
+            await self._subscription._messages_queue.put(PubSubReply(channel, value, pattern=pattern))
 
         # We can safely ignore 'subscribe'/'unsubscribe' replies at this point,
         # they don't contain anything really useful.
@@ -1025,7 +1025,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         (Or when we are in a transaction, return a future for the answer.)
         """
         # Wait for the answer to come in
-        result = yield from answer_f
+        result = await answer_f
 
         if transaction != _NoTransaction and not _bypass:
             # When the connection is inside a transaction, the query will be queued.
@@ -1073,7 +1073,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         # Get lock.
         if transaction == _NoTransaction:
-            yield from self._transaction_lock.acquire()
+            await self._transaction_lock.acquire()
         else:
             assert transaction == self._transaction
 
@@ -1097,7 +1097,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
 
         # Receive answer.
-        result = yield from self._get_answer(transaction, answer_f, _bypass=_bypass, call=call)
+        result = await self._get_answer(transaction, answer_f, _bypass=_bypass, call=call)
         return result
 
     # Internal
@@ -1125,22 +1125,22 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         ::
 
-            yield from protocol.set('key', 'value')
-            result = yield from protocol.get('key')
+            await protocol.set('key', 'value')
+            result = await protocol.get('key')
             assert result == 'value'
 
         To set a value and its expiration, only if key not exists, do:
 
         ::
 
-            yield from protocol.set('key', 'value', expire=1, only_if_not_exists=True)
+            await protocol.set('key', 'value', expire=1, only_if_not_exists=True)
 
         This will send: ``SET key value EX 1 NX`` at the network.
         To set value and its expiration in milliseconds, but only if key already exists:
 
         ::
 
-            yield from protocol.set('key', 'value', pexpire=1000, only_if_exists=True)
+            await protocol.set('key', 'value', pexpire=1000, only_if_exists=True)
         """
         params = [
             b'set',
@@ -1496,7 +1496,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
     @_command
     async def brpoplpush(self, tr, source:NativeType, destination:NativeType, timeout:int=0) -> NativeType:
         """ Pop a value from a list, push it to another list and return it; or block until one is available """
-        result = yield from self._query(tr, b'brpoplpush', self.encode_from_native(source), self.encode_from_native(destination),
+        result = await self._query(tr, b'brpoplpush', self.encode_from_native(source), self.encode_from_native(destination),
                     self._encode_int(timeout), set_blocking=True)
 
         if result is None:
@@ -1829,12 +1829,12 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         ::
 
             # Create subscription
-            subscription = yield from protocol.start_subscribe()
-            yield from subscription.subscribe(['key'])
-            yield from subscription.psubscribe(['pattern*'])
+            subscription = await protocol.start_subscribe()
+            await subscription.subscribe(['key'])
+            await subscription.psubscribe(['pattern*'])
 
             while True:
-                result = yield from subscription.next_published()
+                result = await subscription.next_published()
                 print(result)
 
         :returns: :class:`~asyncio_redis.Subscription`
@@ -2045,12 +2045,12 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         ::
 
-            script = yield from protocol.register_script(lua_code)
-            result = yield from script.run(keys=[...], args=[...])
+            script = await protocol.register_script(lua_code)
+            result = await script.run(keys=[...], args=[...])
         """
         # The register_script APi was made compatible with the redis.py library:
         # https://github.com/andymccurdy/redis-py
-        sha = yield from self.script_load(tr, script)
+        sha = await self.script_load(tr, script)
         return Script(sha, script, lambda:self.evalsha)
 
     @_query_command
@@ -2071,7 +2071,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         scrips running.
         """
         try:
-            return (yield from self._query(tr, b'script', b'kill'))
+            return (await self._query(tr, b'script', b'kill'))
         except ErrorReply as e:
             if 'NOTBUSY' in e.args[0]:
                 raise NoRunningScriptError
@@ -2095,7 +2095,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         if not args: args = []
 
         try:
-            result = yield from self._query(tr, b'evalsha', sha.encode('ascii'),
+            result = await self._query(tr, b'evalsha', sha.encode('ascii'),
                         self._encode_int(len(keys)),
                         *map(self.encode_from_native, keys + args))
 
@@ -2118,9 +2118,9 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         ::
 
-            cursor = yield from protocol.scan(match='*')
+            cursor = await protocol.scan(match='*')
             while True:
-                item = yield from cursor.fetchone()
+                item = await cursor.fetchone()
                 if item is None:
                     break
                 else:
@@ -2128,8 +2128,8 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         ::
 
-            cursor = yield from protocol.scan(match='*')
-            items = yield from cursor.fetchall()
+            cursor = await protocol.scan(match='*')
+            items = await cursor.fetchall()
 
         It's possible to alter the COUNT-parameter, by assigning a value to
         ``cursor.count``, before calling ``fetchone`` or ``fetchall``. For
@@ -2221,28 +2221,28 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         ::
 
             # Watch keys for concurrent updates
-            yield from protocol.watch(['key', 'other_key'])
+            await protocol.watch(['key', 'other_key'])
 
-            value = yield from protocol.get('key')
-            another_value = yield from protocol.get('another_key')
+            value = await protocol.get('key')
+            another_value = await protocol.get('another_key')
 
-            transaction = yield from protocol.multi()
+            transaction = await protocol.multi()
 
-            f1 = yield from transaction.set('key', another_value)
-            f2 = yield from transaction.set('another_key', value)
+            f1 = await transaction.set('key', another_value)
+            f2 = await transaction.set('another_key', value)
 
             # Commit transaction
-            yield from transaction.exec()
+            await transaction.exec()
 
             # Retrieve results
-            yield from f1
-            yield from f2
+            await f1
+            await f2
 
         """
         return self._watch(tr, keys)
 
     async def _watch(self, tr, keys:ListOf(NativeType)) -> NoneType:
-        result = yield from self._query(tr, b'watch', *map(self.encode_from_native, keys), _bypass=True)
+        result = await self._query(tr, b'watch', *map(self.encode_from_native, keys), _bypass=True)
         assert result == b'OK'
 
     @_command
@@ -2252,18 +2252,18 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
 
         ::
 
-            transaction = yield from protocol.multi()
+            transaction = await protocol.multi()
 
             # Run commands in transaction
-            f1 = yield from transaction.set('key', 'value')
-            f2 = yield from transaction.set('another_key', 'another_value')
+            f1 = await transaction.set('key', 'value')
+            f2 = await transaction.set('another_key', 'another_value')
 
             # Commit transaction
-            yield from transaction.exec()
+            await transaction.exec()
 
             # Retrieve results (you can also use asyncio.tasks.gather)
-            result1 = yield from f1
-            result2 = yield from f2
+            result1 = await f1
+            result2 = await f2
 
         :returns: A :class:`asyncio_redis.Transaction` instance.
         """
@@ -2271,17 +2271,17 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         if tr != _NoTransaction:
             raise Error('Multi calls can not be nested.')
         else:
-            yield from self._transaction_lock.acquire()
+            await self._transaction_lock.acquire()
             tr = Transaction(self)
             self._transaction = tr
 
         # Call watch
         if watch is not None:
-            yield from self._watch(tr, watch)
-#        yield from asyncio.sleep(.015)
+            await self._watch(tr, watch)
+#        await asyncio.sleep(.015)
 
         # Call multi
-        result = yield from self._query(tr, b'multi', _bypass=True)
+        result = await self._query(tr, b'multi', _bypass=True)
         assert result == b'OK'
 
         self._transaction_response_queue = deque()
@@ -2299,7 +2299,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             self._transaction_response_queue = None
 
             # Get transaction answers.
-            multi_bulk_reply = yield from self._query(tr, b'exec', _bypass=True)
+            multi_bulk_reply = await self._query(tr, b'exec', _bypass=True)
 
             if multi_bulk_reply is None:
                 # We get None when a transaction failed.
@@ -2308,7 +2308,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
                 assert isinstance(multi_bulk_reply, MultiBulkReply)
 
             for f in multi_bulk_reply.iter_raw():
-                answer = yield from f
+                answer = await f
                 f2, call = futures_and_postprocessors.popleft()
 
                 if isinstance(answer, Exception):
@@ -2331,7 +2331,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             raise Error('Not in transaction')
 
         try:
-            result = yield from self._query(tr, b'discard', _bypass=True)
+            result = await self._query(tr, b'discard', _bypass=True)
             assert result == b'OK'
         finally:
             self._transaction_response_queue = deque()
@@ -2345,7 +2345,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         if not self._transaction or self._transaction != tr:
             raise Error('Not in transaction')
 
-        result = yield from self._query(tr, b'unwatch')   # XXX: should be _bypass???
+        result = await self._query(tr, b'unwatch')   # XXX: should be _bypass???
         assert result == b'OK'
 
 
@@ -2362,10 +2362,10 @@ class Script:
 
         ::
 
-            script_reply = yield from script.run(keys=[], args=[])
+            script_reply = await script.run(keys=[], args=[])
 
             # If the LUA script returns something, retrieve the return value
-            result = yield from script_reply.return_value()
+            result = await script_reply.return_value()
 
         This will raise a :class:`~asyncio_redis.exceptions.ScriptKilledError`
         exception if the script was killed.
@@ -2457,7 +2457,7 @@ class Subscription:
 
         :returns: instance of :class:`PubSubReply <asyncio_redis.replies.PubSubReply>`
         """
-        return (yield from self._messages_queue.get())
+        return (await self._messages_queue.get())
 
 
 class HiRedisProtocol(RedisProtocol, metaclass=_RedisProtocolMeta):

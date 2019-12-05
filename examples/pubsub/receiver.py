@@ -12,16 +12,16 @@ if __name__ == '__main__':
 
     def run():
         # Create a new redis connection (this will also auto reconnect)
-        connection = yield from asyncio_redis.Connection.create('localhost', 6379)
+        connection = await asyncio_redis.Connection.create('localhost', 6379)
 
         try:
             # Subscribe to a channel.
-            subscriber = yield from connection.start_subscribe()
-            yield from subscriber.subscribe([ 'our-channel' ])
+            subscriber = await connection.start_subscribe()
+            await subscriber.subscribe([ 'our-channel' ])
 
             # Print published values in a while/true loop.
             while True:
-                reply = yield from subscriber.next_published()
+                reply = await subscriber.next_published()
                 print('Received: ', repr(reply.value), 'on channel', reply.channel)
 
         finally:

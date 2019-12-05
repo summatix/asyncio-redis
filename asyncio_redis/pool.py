@@ -19,8 +19,8 @@ class Pool:
 
     ::
 
-        connection = yield from Pool.create(host='localhost', port=6379, poolsize=10)
-        result = yield from connection.set('key', 'value')
+        connection = await Pool.create(host='localhost', port=6379, poolsize=10)
+        result = await connection.set('key', 'value')
     """
     @classmethod
     async def create(cls, host='localhost', port=6379, *, password=None, db=0,
@@ -56,7 +56,7 @@ class Pool:
         self._connections = []
 
         for i in range(poolsize):
-            connection = yield from Connection.create(host=host, port=port,
+            connection = await Connection.create(host=host, port=port,
                             password=password, db=db, encoder=encoder,
                             auto_reconnect=auto_reconnect, loop=loop,
                             protocol_class=protocol_class)
@@ -123,7 +123,7 @@ class Pool:
     @wraps(RedisProtocol.register_script)
     async def register_script(self, script:str) -> Script:
         # Call register_script from the Protocol.
-        script = yield from self.__getattr__('register_script')(script)
+        script = await self.__getattr__('register_script')(script)
         assert isinstance(script, Script)
 
         # Return a new script instead that runs it on any connection of the pool.

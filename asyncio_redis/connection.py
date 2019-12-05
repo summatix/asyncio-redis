@@ -22,8 +22,8 @@ class Connection:
 
     ::
 
-        connection = yield from Connection.create(host='localhost', port=6379)
-        result = yield from connection.set('key', 'value')
+        connection = await Connection.create(host='localhost', port=6379)
+        result = await connection.set('key', 'value')
     """
     @classmethod
     async def create(cls, host='localhost', port=6379, *, password=None, db=0,
@@ -68,9 +68,9 @@ class Connection:
 
         # Connect
         if connection._auto_reconnect:
-            yield from connection._reconnect()
+            await connection._reconnect()
         else:
-            yield from connection._connect()
+            await connection._connect()
 
         return connection
 
@@ -97,9 +97,9 @@ class Connection:
         """
         logger.log(logging.INFO, 'Connecting to redis')
         if self.port:
-            yield from self._loop.create_connection(lambda: self.protocol, self.host, self.port)
+            await self._loop.create_connection(lambda: self.protocol, self.host, self.port)
         else:
-            yield from self._loop.create_unix_connection(lambda: self.protocol, self.host)
+            await self._loop.create_unix_connection(lambda: self.protocol, self.host)
 
     async def _reconnect(self):
         """
@@ -107,7 +107,7 @@ class Connection:
         """
         while True:
             try:
-                yield from self._connect()
+                await self._connect()
                 self._reset_retry_interval()
                 return
             except OSError:
@@ -115,7 +115,7 @@ class Connection:
                 self._increase_retry_interval()
                 interval = self._get_retry_interval()
                 logger.log(logging.INFO, 'Connecting to redis failed. Retrying in %i seconds' % interval)
-                yield from asyncio.sleep(interval, loop=self._loop)
+                await asyncio.sleep(interval, loop=self._loop)
 
     def __getattr__(self, name):
         # Only proxy commands.

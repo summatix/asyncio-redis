@@ -15,15 +15,15 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
 
     def run():
-        connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
+        connection = await asyncio_redis.Connection.create(host='localhost', port=6379)
 
         try:
             while True:
-                yield from asyncio.sleep(.5)
+                await asyncio.sleep(.5)
 
                 try:
                     # Try to send message
-                    yield from connection.publish('our-channel', 'message')
+                    await connection.publish('our-channel', 'message')
                 except Exception as e:
                     print ('errero', repr(e))
         finally:

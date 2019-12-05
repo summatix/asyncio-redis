@@ -10,13 +10,13 @@ if __name__ == '__main__':
 
     def run():
         # Create connection
-        transport, protocol = yield from loop.create_connection(RedisProtocol, 'localhost', 6379)
+        transport, protocol = await loop.create_connection(RedisProtocol, 'localhost', 6379)
 
         # Set a key
-        yield from protocol.set('key', 'value')
+        await protocol.set('key', 'value')
 
         # Retrieve a key
-        result = yield from protocol.get('key')
+        result = await protocol.get('key')
 
         # Print result
         print ('Succeeded', result == 'value')

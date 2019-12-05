@@ -33,7 +33,7 @@ class Cursor:
     async def _fetch_more(self):
         """ Get next chunk of keys from Redis """
         if not self._done:
-            chunk = yield from self._scanfunc(self._cursor, self.count)
+            chunk = await self._scanfunc(self._cursor, self.count)
             self._cursor = chunk.new_cursor_pos
 
             if chunk.new_cursor_pos == 0:
@@ -52,7 +52,7 @@ class Cursor:
         # Redis can return a chunk of zero items, even when we're not yet finished.
         # See: https://github.com/jonathanslenders/asyncio-redis/issues/65#issuecomment-127026408
         while not self._queue and not self._done:
-            yield from self._fetch_more()
+            await self._fetch_more()
 
         # Return the next item.
         if self._queue:
@@ -63,7 +63,7 @@ class Cursor:
         results = []
 
         while not self._done:
-            yield from self._fetch_more()
+            await self._fetch_more()
             results.extend(self._queue)
             self._queue.clear()
 
@@ -76,7 +76,7 @@ class SetCursor(Cursor):
     <asyncio_redis.RedisProtocol.sscan>` query.
     """
     async def fetchall(self):
-        result = yield from super().fetchall()
+        result = await super().fetchall()
         return set(result)
 
 
@@ -93,8 +93,8 @@ class DictCursor(Cursor):
         Get next { key: value } tuple
         It returns `None` after the last item.
         """
-        key = yield from super().fetchone()
-        value = yield from super().fetchone()
+        key = await super().fetchone()
+        value = await super().fetchone()
 
         if key is not None:
             key, value = self._parse(key, value)
@@ -105,7 +105,7 @@ class DictCursor(Cursor):
         results = {}
 
         while True:
-            i = yield from self.fetchone()
+            i = await self.fetchone()
             if i is None:
                 break
             else:

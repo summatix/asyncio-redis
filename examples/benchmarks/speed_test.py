@@ -15,8 +15,8 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
 
     def run():
-        #connection = yield from asyncio_redis.Connection.create(host='localhost', port=6379)
-        connection = yield from asyncio_redis.Pool.create(host='localhost', port=6379, poolsize=50)
+        #connection = await asyncio_redis.Connection.create(host='localhost', port=6379)
+        connection = await asyncio_redis.Pool.create(host='localhost', port=6379, poolsize=50)
 
         try:
             # === Benchmark 1 ==
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
             # Do 10,000 set requests
             for i in range(10 * 1000):
-                yield from connection.set('key', 'value') # By using yield from here, we wait for the answer.
+                await connection.set('key', 'value') # By using await here, we wait for the answer.
 
             print('Done. Duration=', time.time() - start)
             print()
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
             # Do 10,000 set requests
             futures = [ asyncio.Task(connection.set('key', 'value')) for x in range(10 * 1000) ]
-            yield from asyncio.gather(*futures)
+            await asyncio.gather(*futures)
 
             print('Done. Duration=', time.time() - start)
 
