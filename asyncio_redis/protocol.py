@@ -5,8 +5,12 @@ import types
 
 from asyncio.futures import Future
 from asyncio.queues import Queue
-from asyncio.streams import IncompleteReadError
 from asyncio.streams import StreamReader
+
+try:
+    from asyncio.streams import IncompleteReadError
+except ImportError:
+    from asyncio import IncompleteReadError
 
 try:
     import hiredis
