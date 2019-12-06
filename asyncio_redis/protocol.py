@@ -783,7 +783,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         self._pubsub_patterns = set() # Set of patterns
 
         # Transaction related stuff.
-        self._transaction_lock = asyncio.Lock(loop=loop)
+        self._transaction_lock = asyncio.Lock()
         self._transaction = None
         self._transaction_response_queue = None # Transaction answer queue
 
