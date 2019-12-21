@@ -798,7 +798,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
     def connection_made(self, transport):
         self.transport = transport
         self._is_connected = True
-        logger.log(logging.INFO, 'Redis connection made')
+        logger.log(logging.DEBUG, 'Redis connection made')
 
         # Pipelined calls
         self._pipelined_calls = set() # Set of all the pipelined calls.
@@ -851,7 +851,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             return str("%f" % value.value).encode('ascii')
 
     def eof_received(self):
-        logger.log(logging.INFO, 'EOF received in RedisProtocol')
+        logger.log(logging.DEBUG, 'EOF received in RedisProtocol')
         self._reader.feed_eof()
 
     def connection_lost(self, exc):
@@ -875,7 +875,7 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
             if not f.cancelled():
                 f.set_exception(ConnectionLostError(exc))
 
-        logger.log(logging.INFO, 'Redis connection lost')
+        logger.log(logging.DEBUG, 'Redis connection lost')
 
         # Call connection_lost callback
         if self._connection_lost_callback:
