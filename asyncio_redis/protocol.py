@@ -809,20 +809,24 @@ class RedisProtocol(asyncio.Protocol, metaclass=_RedisProtocolMeta):
         self._reader_f = ensure_future(self._reader_coroutine(), loop=self._loop)
 
         async def initialize():
-            # If a password or database was been given, first connect to that one.
-            if self.password:
-                await self.auth(self.password)
+            try:
+                # If a password or database was been given, first connect to that one.
+                if self.password:
+                    await self.auth(self.password)
 
-            if self.db:
-                await self.select(self.db)
+                if self.db:
+                    await self.select(self.db)
 
-            #  If we are in pubsub mode, send channel subscriptions again.
-            if self._in_pubsub:
-                if self._pubsub_channels:
-                    await self._subscribe(self._subscription, list(self._pubsub_channels)) # TODO: unittest this
+                #  If we are in pubsub mode, send channel subscriptions again.
+                if self._in_pubsub:
+                    if self._pubsub_channels:
+                        await self._subscribe(self._subscription, list(self._pubsub_channels)) # TODO: unittest this
 
-                if self._pubsub_patterns:
-                    await self._psubscribe(self._subscription, list(self._pubsub_patterns))
+                    if self._pubsub_patterns:
+                        await self._psubscribe(self._subscription, list(self._pubsub_patterns))
+
+            except ConnectionLostError:
+                pass
 
         ensure_future(initialize(), loop=self._loop)
 
